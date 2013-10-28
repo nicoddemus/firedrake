@@ -2,6 +2,7 @@ import pytest
 
 from firedrake import *
 import pyop2 as op2
+from pyop2.profiling import *
 
 
 def integrate_unit_cube(family, degree):
@@ -47,6 +48,7 @@ def test_firedrake_extrusion_unit_cube():
     degree = 1
 
     assert integrate_unit_cube(family, degree) < 1.0e-12
+    summary()
 
 if __name__ == '__main__':
     import os

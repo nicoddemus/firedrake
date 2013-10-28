@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from firedrake import *
+from pyop2.profiling import *
 
 
 def identity(family, degree):
@@ -66,7 +67,7 @@ def test_firedrake_identity_parallel():
     MPI.COMM_WORLD.allreduce(MPI.IN_PLACE, error, MPI.MAX)
     print '[%d]' % MPI.COMM_WORLD.rank, 'error:', error
     assert (error < np.array([1.0e-11, 1.0e-6, 1.0e-6, 1.0e-5])).all()
-
+    summary()
 
 @pytest.mark.xfail(reason="Parallel vector function space assembly needs BAIJ matrices")
 @pytest.mark.parallel(nprocs=2)

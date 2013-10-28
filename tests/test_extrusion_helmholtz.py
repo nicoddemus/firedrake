@@ -13,6 +13,7 @@ and the analytical solution
 
 import pytest
 import sys
+from pyop2.profiling import *
 from firedrake import *
 
 
@@ -23,7 +24,8 @@ def helmholtz(test_mode, pwr=None):
         power = pwr
     # Create mesh and define function space
     m = UnitSquareMesh(2 ** power, 2 ** power)
-    layers = 2 ** power + 1
+    #m = OrderedMesh("/homes/gb308/meshes/spacefilling1.node")
+    layers = 100
 
     # Populate the coordinates of the extruded mesh by providing the
     # coordinates as a field.
@@ -33,7 +35,7 @@ def helmholtz(test_mode, pwr=None):
     V = FunctionSpace(mesh, "Lagrange", 1, vfamily="Lagrange", vdegree=1)
 
     # Define variational problem
-    u = TrialFunction(V)
+    u = Function(V) #TrialFunction(V)
     v = TestFunction(V)
     f = Function(V)
     f.interpolate(
@@ -42,10 +44,11 @@ def helmholtz(test_mode, pwr=None):
     L = f * v * dx
 
     # Compute solution
+    #for i in range(10):
     assemble(a)
     assemble(L)
     x = Function(V)
-    solve(a == L, x)
+    #solve(a == L, x)
 
     # Analytical solution
     f.interpolate(Expression("cos(x[0]*pi*2)*cos(x[1]*pi*2)*cos(x[2]*pi*2)"))
@@ -61,9 +64,11 @@ def helmholtz(test_mode, pwr=None):
 
 
 @pytest.mark.skipif("config.option.short")
+@pytest.mark.parallel
 def test_firedrake_extrusion_helmholtz():
     import numpy as np
-    l2_diff = np.array([helmholtz(test_mode=True, pwr=i) for i in range(4, 6)])
+    l2_diff = np.array([helmholtz(test_mode=True, pwr=i) for i in range(7, 8)])
+    summary()
     print "L2 error norms:", l2_diff
     l2_conv = np.log2(l2_diff[:-1] / l2_diff[1:])
     print "Convergence order:", l2_conv

@@ -2,18 +2,18 @@ import pytest
 
 from firedrake import *
 import pyop2 as op2
-
+from pyop2.profiling import *
 
 def integrate_p0(family, degree):
     power = 5
     m = UnitSquareMesh(2 ** power, 2 ** power)
-    layers = 11
+    layers = layers = 2 ** power + 1
 
     # Populate the coordinates of the extruded mesh by providing the
     # coordinates as a field.
     # TODO: provide a kernel which will describe how coordinates are extruded.
 
-    mesh = firedrake.ExtrudedMesh(m, layers, layer_height=0.1)
+    mesh = firedrake.ExtrudedMesh(m, layers, layer_height=1.0 / (layers - 1))
 
     fs = firedrake.FunctionSpace(mesh, family, degree, name="fs")
 
@@ -49,6 +49,7 @@ def test_firedrake_extrusion_p0():
     degree = 0
 
     assert integrate_p0(family, degree) < 1.0e-11
+    summary()
 
 if __name__ == '__main__':
     import os

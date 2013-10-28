@@ -154,6 +154,9 @@ def _triangled(basename, exts):
     """
     return all(map(lambda ext: os.path.exists(basename + ext), exts))
 
+class OrderedMesh(Mesh):
+    def __init__(self, filename):
+        super(OrderedMesh, self).__init__(filename)
 
 class UnitSquareMesh(Mesh):
 

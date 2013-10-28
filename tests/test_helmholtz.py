@@ -14,6 +14,7 @@ and the analytical solution
 import pytest
 
 from firedrake import *
+from pyop2.profiling import *
 
 
 def helmholtz(x, degree=2):
@@ -48,6 +49,7 @@ def test_firedrake_helmholtz():
     conv = np.log2(diff[:-1] / diff[1:])
     print "convergence order:", conv
     assert (np.array(conv) > 2.8).all()
+	summary()
 
 if __name__ == '__main__':
     import os

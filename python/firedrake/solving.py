@@ -421,7 +421,33 @@ def _assemble(f, tensor=None, bcs=None):
             args.append(m.interior_facets.local_facet_dat(op2.READ))
             op2.par_loop(*args)
 
-    if bcs is not None and is_mat:
+        if domain_type == 'exterior_facet_horizontal':
+            if op2.MPI.parallel:
+                raise \
+                    NotImplementedError(
+                        "No support for facet integrals under MPI yet")
+
+            if is_mat:
+                tensor_arg = tensor(op2.INC,
+                                    (test.exterior_facet_node_map[op2.i[0]],
+                                     trial.exterior_facet_node_map[op2.i[1]]),
+                                    flatten=True)
+            elif is_vec:
+                tensor_arg = tensor(op2.INC,
+                                    test.exterior_facet_node_map[op2.i[0]],
+                                    flatten=True)
+            else:
+                tensor_arg = tensor(op2.INC)
+            args = [kernel, m.exterior_facets.set, tensor_arg,
+                    coords.dat(op2.READ, coords.exterior_facet_node_map,
+                               flatten=True)]
+            for c in fd.original_coefficients:
+                args.append(c.dat(op2.READ, c.exterior_facet_node_map,
+                                  flatten=True))
+            args.append(m.exterior_facets.local_facet_dat(op2.READ))
+            op2.par_loop(*args)
+
+	if bcs is not None and is_mat:
         for bc in bcs:
             tensor.zero_rows(bc.nodes)
 
