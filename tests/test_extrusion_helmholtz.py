@@ -23,8 +23,8 @@ def helmholtz(test_mode, pwr=None):
     else:
         power = pwr
     # Create mesh and define function space
-    m = UnitSquareMesh(2 ** power, 2 ** power)
-    #m = OrderedMesh("/homes/gb308/meshes/spacefilling1.node")
+    #m = UnitSquareMesh(2 ** power, 2 ** power)
+    m = OrderedMesh("/homes/gb308/meshes/spacefilling1.node")
     layers = 100
 
     # Populate the coordinates of the extruded mesh by providing the
@@ -64,7 +64,7 @@ def helmholtz(test_mode, pwr=None):
 
 
 @pytest.mark.skipif("config.option.short")
-@pytest.mark.parallel
+#@pytest.mark.parallel
 def test_firedrake_extrusion_helmholtz():
     import numpy as np
     l2_diff = np.array([helmholtz(test_mode=True, pwr=i) for i in range(7, 8)])

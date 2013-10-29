@@ -447,7 +447,8 @@ def _assemble(f, tensor=None, bcs=None):
             args.append(m.exterior_facets.local_facet_dat(op2.READ))
             op2.par_loop(*args)
 
-	if bcs is not None and is_mat:
+    #Make the diags 1
+    if bcs is not None and is_mat:
         for bc in bcs:
             tensor.zero_rows(bc.nodes)
 
