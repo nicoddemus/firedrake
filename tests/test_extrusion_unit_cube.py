@@ -6,7 +6,7 @@ from pyop2.profiling import *
 
 
 def integrate_unit_cube(family, degree):
-    power = 5
+    power = 0
     m = UnitSquareMesh(2 ** power, 2 ** power)
     layers = 11
 
