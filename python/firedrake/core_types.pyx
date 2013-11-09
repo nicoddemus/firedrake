@@ -80,8 +80,16 @@ def fiat_from_ufl_element(ufl_element):
 
         return FIAT.TensorFiniteElement(a, b)
     else:
-        return FIAT.supported_elements[ufl_element.family()]\
-            (_FIAT_cells[ufl_element.cell().cellname()](), ufl_element.degree())
+        try:
+            return FIAT.supported_elements[ufl_element.family()]\
+                (_FIAT_cells[ufl_element.cell().cellname()](), ufl_element.degree())
+        except KeyError as e:
+            if e.args[0] == "Real":
+                # The FIAT element doesn't make sense for Reals.
+                return None
+            else:
+                raise
+
 
 # Functions related to the extruded case
 def compute_extruded_dofs(fiat_element, flat_dofs, layers):
@@ -817,63 +825,71 @@ class FunctionSpace(object):
 
             self.fiat_element = fiat_from_ufl_element(self._ufl_element)
 
-        # Create the extruded function space
-        cdef ft.element_t element_f = as_element(self.fiat_element)
+        cdef ft.element_t element_f
+        cdef void *fluidity_mesh
+        cdef int *dofs_per_column
 
-        cdef void *fluidity_mesh = py.PyCapsule_GetPointer(mesh._fluidity_mesh, _mesh_name)
-        if fluidity_mesh == NULL:
-            raise RuntimeError("Didn't find fluidity mesh pointer in mesh %s" % mesh)
+        if self._ufl_element.family() == 'Real':
+            self._node_count = 1
 
-        cdef int *dofs_per_column = <int *>np.PyArray_DATA(self.dofs_per_column)
-
-        if isinstance(mesh, ExtrudedMesh):
-            function_space = ft.extruded_mesh_f(fluidity_mesh, &element_f, dofs_per_column)
         else:
-            function_space = ft.function_space_f(fluidity_mesh, &element_f)
+            # Create the function space
+            element_f = as_element(self.fiat_element)
 
-        free(element_f.dofs_per)
-        free(element_f.entity_dofs)
+            fluidity_mesh = py.PyCapsule_GetPointer(mesh._fluidity_mesh, _mesh_name)
+            if fluidity_mesh == NULL:
+                raise RuntimeError("Didn't find fluidity mesh pointer in mesh %s" % mesh)
+            
+            dofs_per_column = <int *>np.PyArray_DATA(self.dofs_per_column)
 
-        self._fluidity_function_space = py.PyCapsule_New(function_space.fluidity_mesh,
-                                                         _function_space_name,
-                                                         &function_space_destructor)
-
-        self._node_count = function_space.dof_count
-        self.cell_node_list = np.array(<int[:function_space.element_count, :element_f.ndof:1]>
-                                      function_space.element_dof_list)-1
-
-        self.dof_classes = np.array(<int[:4]>function_space.dof_classes)
-        self.dof_classes = self.dof_classes.astype(int)
-        self._mesh = mesh
-
-        self._halo = Halo(self._fluidity_function_space, 'vertex', self.dof_classes)
-
-        self.name = name
-
-        self._dim = 1
-
-        if not isinstance(self._mesh, ExtrudedMesh):
-            if self._mesh.interior_facets.count > 0:
-                self.interior_facet_node_list = \
-                    np.array(<int[:self._mesh.interior_facets.count,:2*element_f.ndof]>
-                             function_space.interior_facet_node_list)
+            if isinstance(mesh, ExtrudedMesh):
+                function_space = ft.extruded_mesh_f(fluidity_mesh, &element_f, dofs_per_column)
             else:
-                self.interior_facet_node_list = None
+                function_space = ft.function_space_f(fluidity_mesh, &element_f)
+
+            free(element_f.dofs_per)
+            free(element_f.entity_dofs)
+
+            self._fluidity_function_space = py.PyCapsule_New(function_space.fluidity_mesh,
+                                                             _function_space_name,
+                                                             &function_space_destructor)
+
+            self._node_count = function_space.dof_count
+            self.cell_node_list = np.array(<int[:function_space.element_count, :element_f.ndof:1]>
+                                            function_space.element_dof_list)-1
+
+            self.dof_classes = np.array(<int[:4]>function_space.dof_classes)
+            self.dof_classes = self.dof_classes.astype(int)
+            self._mesh = mesh
+
+            self._halo = Halo(self._fluidity_function_space, 'vertex', self.dof_classes)
+
+            if not isinstance(self._mesh, ExtrudedMesh):
+                if self._mesh.interior_facets.count > 0:
+                    self.interior_facet_node_list = \
+                        np.array(<int[:self._mesh.interior_facets.count,:2*element_f.ndof]>
+                                  function_space.interior_facet_node_list)
+                else:
+                    self.interior_facet_node_list = None
 
             self.exterior_facet_node_list = \
                 np.array(<int[:self._mesh.exterior_facets.count,:element_f.ndof]>
-                         function_space.exterior_facet_node_list)
+                          function_space.exterior_facet_node_list)
+                
+            # Empty map caches. This is a sui generis cache
+            # implementation because of the need to support boundary
+            # conditions.
+            self._cell_node_map_cache = {}
+            self._exterior_facet_map_cache = {}
+            self._interior_facet_map_cache = {}
 
+            
+        self.name = name
+
+        self._dim = 1
         # Note that this is the function space rank and is therefore
         # always 0. The value rank may be different.
         self.rank = 0
-
-        # Empty map caches. This is a sui generis cache
-        # implementation because of the need to support boundary
-        # conditions.
-        self._cell_node_map_cache = {}
-        self._exterior_facet_map_cache = {}
-        self._interior_facet_map_cache = {}
 
     @property
     def node_count(self):
@@ -899,6 +915,10 @@ class FunctionSpace(object):
         of freedom are stored at each node."""
 
         name = "%s_nodes" % self.name
+        
+
+        if self._ufl_element.family() == 'Real':
+            return None
         if self._halo:
             return op2.Set(self.dof_classes, name,
                            halo=self._halo.op2_halo, layers=self._mesh.layers)
@@ -909,13 +929,23 @@ class FunctionSpace(object):
     def dof_dset(self):
         """A :class:`pyop2.Set` containing the degrees of freedom of
         this :class:`FunctionSpace`."""
+        
+        if self._ufl_element.family() == 'Real':
+            return None
+
         return op2.DataSet(self.node_set, self.dim)
 
     def make_dat(self, val=None, valuetype=None, name=None, uid=None):
         """Return a newly allocated :class:`pyop2.Dat` defined on the
-        :attr:`dof.dset` of this :class:`Function`."""
+        :attr:`dof.dset` of this :class:`Function`.
 
-        return op2.Dat(self.dof_dset, val, valuetype, name, uid=uid)
+        If the :class:`FunctionSpace` is over the "Real" element, 
+        return a :class:`pyop2.Global` instead."""
+
+        if self._ufl_element.family() == 'Real':
+            return op2.Global(self._dim, val, valuetype, name)
+        else:
+            return op2.Dat(self.dof_dset, val, valuetype, name, uid=uid)
 
 
     def cell_node_map(self, bcs=None):
@@ -925,6 +955,9 @@ class FunctionSpace(object):
         negative node indices where boundary conditions should be
         applied. Where a PETSc matrix is employed, this will cause the
         corresponding values to be discarded during matrix assembly."""
+
+        if self._ufl_element.family() == 'Real':
+            return None
 
         if bcs:
             parent = self.cell_node_map()
@@ -948,6 +981,9 @@ class FunctionSpace(object):
         applied. Where a PETSc matrix is employed, this will cause the
         corresponding values to be discarded during matrix assembly."""
 
+        if self._ufl_element.family() == 'Real':
+            return None
+
         if bcs:
             parent = self.interior_facet_node_map()
         else:
@@ -968,6 +1004,9 @@ class FunctionSpace(object):
         negative node indices where boundary conditions should be
         applied. Where a PETSc matrix is employed, this will cause the
         corresponding values to be discarded during matrix assembly."""
+
+        if self._ufl_element.family() == 'Real':
+            return None
 
         if bcs:
             parent = self.exterior_facet_node_map()
@@ -1017,6 +1056,9 @@ class FunctionSpace(object):
         those facets. Note that this differs from
         :meth:`exterior_facet_node_map` in that only surface nodes
         are referenced, not all nodes in cells touching the surface.'''
+
+        if self._ufl_element.family() == 'Real':
+            return None
 
         el = self.fiat_element
         dim = len(el.ref_el.topology)-1
