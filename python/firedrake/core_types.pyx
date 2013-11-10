@@ -872,9 +872,9 @@ class FunctionSpace(object):
                 else:
                     self.interior_facet_node_list = None
 
-            self.exterior_facet_node_list = \
-                np.array(<int[:self._mesh.exterior_facets.count,:element_f.ndof]>
-                          function_space.exterior_facet_node_list)
+                self.exterior_facet_node_list = \
+                    np.array(<int[:self._mesh.exterior_facets.count,:element_f.ndof]>
+                              function_space.exterior_facet_node_list)
                 
             # Empty map caches. This is a sui generis cache
             # implementation because of the need to support boundary
