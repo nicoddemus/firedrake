@@ -1425,23 +1425,25 @@ class Function(ufl.Coefficient):
         # Produce C array notation of X.
         X_str = "{{"+"},\n{".join([ ",".join(map(str,x)) for x in X.T])+"}}"
 
-        assign_expression = ";\n".join(["A[%(i)d] = %(code)s" % { 'i': i, 'code': code } for i, code in enumerate(expression.code)])
+        assign_expression = ";\n".join(["A[k] = %(code)s" % { 'code': code } for code in expression.code])
         _expression_template = """
-void expression_kernel(double A[%(assign_dim)d], double **x_, int k)
+void expression_kernel(double A[%(ndof)d], double **x_)
 {
   const double X[%(ndof)d][%(xndof)d] = %(x_array)s;
 
   double x[%(dim)d];
   const double pi = 3.141592653589793;
 
-  for (unsigned int d=0; d < %(dim)d; d++) {
-    x[d] = 0;
-    for (unsigned int i=0; i < %(xndof)d; i++) {
-      x[d] += X[k][i] * x_[i][d];
+  for (unsigned int k=0; k < %(ndof)d; k++) {
+    for (unsigned int d=0; d < %(dim)d; d++) {
+      x[d] = 0;
+      for (unsigned int i=0; i < %(xndof)d; i++) {
+        x[d] += X[k][i] * x_[i][d];
+      };
     };
-  };
 
-  %(assign_expression)s;
+    %(assign_expression)s;
+  }
 }
 """
         kernel = op2.Kernel(_expression_template % { "x_array" : X_str,
