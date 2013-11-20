@@ -3,9 +3,10 @@ import pytest
 from firedrake import *
 
 
-@pytest.fixture(scope='module')
-def mesh():
-    return UnitSquareMesh(5, 5)
+@pytest.fixture(scope='module', params=['extruded','non-extruded'])
+def mesh(request):
+    return {'extruded': ExtrudedMesh(UnitSquareMesh(1,1), 5, layer_height=0.25),
+            'non-extruded': UnitSquareMesh(3, 3)}[request.param]
 
 
 def extmesh(nx, ny, nz):
