@@ -1425,7 +1425,8 @@ class Function(ufl.Coefficient):
         # Produce C array notation of X.
         X_str = "{{"+"},\n{".join([ ",".join(map(str,x)) for x in X.T])+"}}"
 
-        assign_expression = ";\n".join(["A[k] = %(code)s" % { 'code': code } for code in expression.code])
+        assign_expression = ";\n".join(["A[k*%(size)d + %(i)d] = %(code)s" \
+                % { 'i': i, 'size': len(expression.code), 'code': code } for i, code in enumerate(expression.code)])
         _expression_template = """
 void expression_kernel(double A[%(ndof)d], double **x_)
 {
