@@ -9,21 +9,21 @@ from common import *
                                          'cg1vcg1[0]', 'cg1vcg1[1]',
                                          'cg1dg0', 'cg1dg0[0]', 'cg1dg0[1]',
                                          'cg2dg1', 'cg2dg1[0]', 'cg2dg1[1]'])
-def fs(request, cg1, vcg1, cg1cg1, cg1vcg1, cg1dg0, cg2dg1):
-    return {'cg1': cg1,
-            'vcg1': vcg1,
-            'cg1cg1': cg1cg1,
-            'cg1cg1[0]': cg1cg1[0],
-            'cg1cg1[1]': cg1cg1[1],
-            'cg1vcg1': cg1vcg1,
-            'cg1vcg1[0]': cg1vcg1[0],
-            'cg1vcg1[1]': cg1vcg1[1],
-            'cg1dg0': cg1dg0,
-            'cg1dg0[0]': cg1dg0[0],
-            'cg1dg0[1]': cg1dg0[1],
-            'cg2dg1': cg2dg1,
-            'cg2dg1[0]': cg2dg1[0],
-            'cg2dg1[1]': cg2dg1[1]}[request.param]
+def fs(request, ecg1, evcg1, ecg1cg1, ecg1vcg1, ecg1dg0, ecg2dg1):
+    return {'cg1': ecg1,
+            'vcg1': evcg1,
+            'cg1cg1': ecg1cg1,
+            'cg1cg1[0]': ecg1cg1[0],
+            'cg1cg1[1]': ecg1cg1[1],
+            'cg1vcg1': ecg1vcg1,
+            'cg1vcg1[0]': ecg1vcg1[0],
+            'cg1vcg1[1]': ecg1vcg1[1],
+            'cg1dg0': ecg1dg0,
+            'cg1dg0[0]': ecg1dg0[0],
+            'cg1dg0[1]': ecg1dg0[1],
+            'cg2dg1': ecg2dg1,
+            'cg2dg1[0]': ecg2dg1[0],
+            'cg2dg1[1]': ecg2dg1[1]}[request.param]
 
 
 @pytest.fixture
@@ -57,13 +57,13 @@ def test_one_form(M, f):
     one_form = assemble(action(M, f))
     assert isinstance(one_form, Function)
     for d, fs in zip(one_form.dat, f.function_space()):
-        assert abs(d.data.sum() - 0.5 * fs.dim) < 1.0e-12
+        assert abs(d.data.sum() - 0.5 * fs.dim) < 1.0e-11
 
 
 def test_zero_form(M, f, one):
     zero_form = assemble(action(action(M, f), one))
     assert isinstance(zero_form, float)
-    assert abs(zero_form - 0.5 * np.prod(f.shape())) < 1.0e-12
+    assert abs(zero_form - 0.5 * np.prod(f.shape())) < 1.0e-11
 
 if __name__ == '__main__':
     import os
