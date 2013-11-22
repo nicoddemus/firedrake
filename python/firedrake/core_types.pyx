@@ -175,19 +175,31 @@ def make_extruded_coords(mesh, layers, kernel=None, layer_height=None):
            extruded_coords[0][2] = 0.1 * layer_number[0][0]; // Z
        }
     """
-
+    # For any non-1D base mesh, extrusion will take place in 3D.
+    not_1d = isinstance(mesh._coordinates[0], np.ndarray)
+    # Kernel code template
     if kernel is None and layer_height is not None:
         kernel = op2.Kernel("""
 void extrusion_kernel(double *xtr[], double *x[], int* j[])
 {
     //Only the Z-coord is increased, the others stay the same
     xtr[0][0] = x[0][0];
-    xtr[0][1] = x[0][1];
-    xtr[0][2] = %(height)s*j[0][0];
-}""" % {"height" : str(layer_height)} , "extrusion_kernel")
+    xtr[0][1] = %(j_y)s
+    %(z_coord)s%(z_height)s%(j_z)s
+}""" % {"z_height" : str(layer_height) if not_1d else "",
+        "z_coord": "xtr[0][2] = " if not_1d else "",
+        "j_z": "*j[0][0];" if not_1d else "",
+        "j_y": "x[0][1];" if not_1d else str(layer_height)+"*j[0][0];"},
+       "extrusion_kernel")
 
-    coords_dim = len(mesh._coordinates[0])
-    coords_xtr_dim = 3 #dimension
+    # Make coords at least 2D
+    if not_1d:
+        coords_dim = len(mesh._coordinates[0])
+        coords_xtr_dim = 3 #dimension
+    else:
+        print "Coords are 1D."
+        coords_dim = 1
+        coords_xtr_dim = 2 #dimension
     # BIG TRICK HERE:
     # We need the +1 in order to include the entire column of vertices.
     # Extrusion is meant to iterate over the 3D cells which are layer - 1 in number.

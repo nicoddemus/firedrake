@@ -4,11 +4,11 @@ from common import *
 
 
 # FIXME: cg1vcg1 is not supported yet
-@pytest.fixture(scope='session', params=['cg1', 'vcg1',
-                                         'cg1cg1', 'cg1cg1[0]', 'cg1cg1[1]',
-                                         'cg1vcg1[0]', 'cg1vcg1[1]',
-                                         'cg1dg0', 'cg1dg0[0]', 'cg1dg0[1]',
-                                         'cg2dg1', 'cg2dg1[0]', 'cg2dg1[1]'])
+@pytest.fixture(scope='module', params=['cg1', 'vcg1',
+                                        'cg1cg1', 'cg1cg1[0]', 'cg1cg1[1]',
+                                        'cg1vcg1[0]', 'cg1vcg1[1]',
+                                        'cg1dg0', 'cg1dg0[0]', 'cg1dg0[1]',
+                                        'cg2dg1', 'cg2dg1[0]', 'cg2dg1[1]'])
 def fs(request, cg1, vcg1, cg1cg1, cg1vcg1, cg1dg0, cg2dg1):
     return {'cg1': cg1,
             'vcg1': vcg1,
