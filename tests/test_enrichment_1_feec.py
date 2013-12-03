@@ -123,7 +123,7 @@ def test_feec(horiz_complex, vert_complex):
     u = Function(V0)
     solve(a == L, u, solver_parameters=parms)
     maxcoeff = max(abs(u.dat.data))
-    assert maxcoeff < 5e-12
+    assert maxcoeff < 6e-12
 
 if __name__ == '__main__':
     import os
