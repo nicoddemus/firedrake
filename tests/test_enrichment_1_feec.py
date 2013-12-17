@@ -103,7 +103,7 @@ def test_feec(horiz_complex, vert_complex):
     v = Function(V1)
     solve(a == L, v, solver_parameters=parms)
     maxcoeff = max(abs(v.dat.data))
-    assert maxcoeff < 1.5e-12
+    assert maxcoeff < 2.0e-12
 
     ### TEST WEAKDIV(WEAKCURL(w)) = 0, for w in V2 ###
 
