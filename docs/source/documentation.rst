@@ -58,6 +58,10 @@ finite element problems in Firedrake.
    solving-interface
    boundary_conditions
 
+Firedrake also supports the handling of Extruded Meshes.
+
+*  :doc:`Extruded Meshes <extrusion>`
+
 .. only:: html
 
   API documentation
