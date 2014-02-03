@@ -198,28 +198,40 @@ class FFCKernel(DiskCached, KernelCached):
                    _firedrake_geometry_md5 + constants.FFC_VERSION +
                    constants.PYOP2_VERSION).hexdigest()
 
-    def __init__(self, form, name):
+    def __init__(self, original_form, name):
         if self._initialized:
             return
 
         incl = PreprocessNode('#include "firedrake_geometry.h"\n')
         inc = [os.path.dirname(__file__)]
-        ffc_tree = ffc_compile_form(form, prefix=name, parameters=ffc_parameters)
-
-        form_data = form.form_data()
 
         kernels = []
-        for ida, kernel in zip(form_data.integral_data, ffc_tree):
+        # Note that split forms are batched by integral i.e. they will only
+        # ever contain a single integral. We therefore always return the first
+        # element of any lists that contain different integrals.
+        for forms in FormSplitter().split(original_form):
+            trees = [ffc_compile_form(form, prefix=name + str(i),
+                                      parameters=ffc_parameters)[0]
+                     for i, form in enumerate(forms)]
+
+            ida = forms[0].form_data().integral_data[0]
             # Set optimization options
             opts = {} if ida.domain_type not in ['cell'] else \
                    {'licm': False,
                     'tile': None,
                     'vect': None,
                     'ap': False}
-            kernels.append(Kernel(Root([incl, kernel]), '%s_%s_integral_0_%s' %
-                          (name, ida.domain_type, ida.domain_id), opts, inc))
-        self.kernels = tuple(kernels)
 
+            def fname(name, ida, suffix=''):
+                return '%s_%s_integral_0_%s' % (name + suffix, ida.domain_type,
+                                                ida.domain_id)
+            idx = lambda form: tuple(a.function_space().index or 0
+                                     for a in form.form_data().original_arguments)
+            kernels.append(Kernel(Root([incl] + trees), fname(name, ida),
+                                  opts, inc,
+                                  [(idx(form), fname(name, ida, str(i)))
+                                   for i, form in enumerate(forms)]))
+        self.kernels = tuple(kernels)
         self._initialized = True
 
 
