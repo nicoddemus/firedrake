@@ -22,6 +22,8 @@ from pyop2.mpi import MPI
 from pyop2.ir.ast_base import PreprocessNode, Root
 from pyop2.utils import as_tuple
 
+from core_types import MixedFunctionSpace
+
 _form_cache = {}
 
 # Silence FFC
@@ -167,16 +169,16 @@ class FormSplitter(ReuseTransformer):
 
     def argument(self, o):
         """Split an argument into its constituent spaces."""
-        if isinstance(o.element(), (FiniteElement, VectorElement)):
-            return o
-        return tuple(Argument(fs.ufl_element(), fs, o.count())
-                     for fs in o.function_space().split())
+        if isinstance(o.function_space(), MixedFunctionSpace):
+            return tuple(Argument(fs.ufl_element(), fs, o.count())
+                         for fs in o.function_space().split())
+        return o
 
     def coefficient(self, o):
         """Split a coefficient into its constituent spaces."""
-        if isinstance(o.element(), (FiniteElement, VectorElement)):
-            return o
-        return o.split()
+        if isinstance(o.function_space(), MixedFunctionSpace):
+            return o.split()
+        return o
 
 
 class FFCKernel(DiskCached, KernelCached):
