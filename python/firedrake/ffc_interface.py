@@ -225,12 +225,19 @@ class FFCKernel(DiskCached, KernelCached):
             def fname(name, ida, suffix=''):
                 return '%s_%s_integral_0_%s' % (name + suffix, ida.domain_type,
                                                 ida.domain_id)
-            idx = lambda form: tuple(a.function_space().index or 0
-                                     for a in form.form_data().original_arguments)
+
+            def idx(form, i):
+                t = tuple(a.function_space().index or 0
+                          for a in form.form_data().original_arguments) or (i, 0)
+                return t if len(t) == 2 else t + (0,) * (2 - len(t))
+            # If we have a single functional, make sure it has index (0, 0)
+            if len(forms) == 1 and forms[0].form_data().rank == 0:
+                blocks = [((0, 0), fname(name, ida, '0'))]
+            else:
+                blocks = [(idx(form, i), fname(name, ida, str(i)))
+                          for i, form in enumerate(forms)]
             kernels.append(Kernel(Root([incl] + trees), fname(name, ida),
-                                  opts, inc,
-                                  [(idx(form), fname(name, ida, str(i)))
-                                   for i, form in enumerate(forms)]))
+                                  opts, inc, blocks))
         self.kernels = tuple(kernels)
         self._initialized = True
 
