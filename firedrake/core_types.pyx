@@ -277,16 +277,15 @@ class _Facets(object):
 
         return op2.Subset(self.set,[])
 
-    def measure_set(self, measure):
-        '''Return the iteration set appropriate to measure. This will
+    def integral_set(self, integral):
+        '''Return the iteration set appropriate to this integral. This will
         either be for all the interior or exterior (as appropriate)
         facets, or for a particular numbered subdomain.'''
 
-        if measure.domain_id() in [measure.DOMAIN_ID_EVERYWHERE,
-                                   measure.DOMAIN_ID_OTHERWISE]:
+        if integral.domain_id() == "everywhere":
             return self.set
         else:
-            return self.subset(measure.domain_id())
+            return self.subset(integral.domain_id())
 
     def subset(self, markers):
         """Return the subset corresponding to a given marker value.
@@ -491,9 +490,9 @@ class Mesh(object):
         self._dx = Measure('cell', domain_data=self.coordinates)
         self._ds = Measure('exterior_facet', domain_data=self.coordinates)
         self._dS = Measure('interior_facet', domain_data=self.coordinates)
-        # Set the domain_data on all the default measures to this coordinate field.
-        for measure in [ufl.dx, ufl.ds, ufl.dS]:
-            measure._domain_data = self.coordinates
+
+        # Attach the coordinate field to coordinate_fs
+        self._coordinate_fs._ufl_element._domain._data = self._coordinate_field
 
     def _from_gmsh(self, filename, dim=0, periodic_coords=None):
         """Read a Gmsh .msh file from `filename`"""
@@ -776,9 +775,6 @@ class ExtrudedMesh(Mesh):
         self._dx = Measure('cell', domain_data=self.coordinates)
         self._ds = Measure('exterior_facet', domain_data=self.coordinates)
         self._dS = Measure('interior_facet', domain_data=self.coordinates)
-        # Set the domain_data on all the default measures to this coordinate field.
-        for measure in [ufl.dx, ufl.ds, ufl.dS]:
-            measure._domain_data = self.coordinates
 
     @property
     def layers(self):
@@ -1034,6 +1030,10 @@ class FunctionSpaceBase(Cached):
 
         # Note: this is the function space rank. The value rank may be different.
         self.rank = rank
+
+        # Set coordinate field as domain data on the element
+        if hasattr(mesh, '_coordinate_field'):
+            element.domain()._data = mesh._coordinate_field
 
         # Empty map caches. This is a sui generis cache
         # implementation because of the need to support boundary

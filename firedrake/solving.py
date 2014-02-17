@@ -399,9 +399,10 @@ def _assemble(f, tensor=None, bcs=None):
     is_mat = fd.rank == 2
     is_vec = fd.rank == 1
 
-    integrals = fd.preprocessed_form.integrals()
+    # FIXME: What if integral_data contains more than one element?
+    integrals = fd.integral_data[0].integrals
     # Extract coordinate field
-    coords = integrals[0].measure().domain_data()
+    coords = fd.integral_data[0].domain.data()
 
     def get_rank(arg):
         return arg.function_space().rank
@@ -423,7 +424,7 @@ def _assemble(f, tensor=None, bcs=None):
         m = test.function_space().mesh()
         map_pairs = []
         for integral in integrals:
-            domain_type = integral.measure().domain_type()
+            domain_type = integral.domain_type()
             if domain_type == "cell":
                 map_pairs.append((test.cell_node_map(), trial.cell_node_map()))
             elif domain_type == "exterior_facet":
@@ -491,7 +492,7 @@ def _assemble(f, tensor=None, bcs=None):
             top = any(bc.sub_domain == "top" for bc in bcs)
             extruded_bcs = (bottom, top)
         for kernel, integral in zip(kernels, integrals):
-            domain_type = integral.measure().domain_type()
+            domain_type = integral.domain_type()
             if domain_type == 'cell':
                 if is_mat:
                     tensor_arg = tensor(op2.INC, (test.cell_node_map(bcs)[op2.i[0]],
@@ -533,7 +534,7 @@ def _assemble(f, tensor=None, bcs=None):
                                         flatten=has_vec_fs(test))
                 else:
                     tensor_arg = tensor(op2.INC)
-                args = [kernel, m.exterior_facets.measure_set(integral.measure()), tensor_arg,
+                args = [kernel, m.exterior_facets.integral_set(integral), tensor_arg,
                         coords.dat(op2.READ, coords.exterior_facet_node_map(),
                                    flatten=True)]
                 for c in fd.original_coefficients:

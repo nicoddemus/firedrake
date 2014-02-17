@@ -399,6 +399,10 @@ class Function(ufl.Coefficient):
         if isinstance(function_space, Function):
             self.assign(function_space)
 
+    def ufl_id(self):
+        """Unique id used by UFL to identify domain data."""
+        return self.uid
+
     def split(self):
         """Extract any sub :class:`Function`\s defined on the component spaces
         of this this :class:`Function`'s :class:`FunctionSpace`."""
