@@ -21,6 +21,7 @@ from pyop2.op2 import Kernel
 from pyop2.mpi import MPI
 from pyop2.coffee.ast_base import PreprocessNode, Root
 from pyop2 import configuration as configuration
+import pyop2.ir.ast_plan as ap
 
 import functionspace
 
