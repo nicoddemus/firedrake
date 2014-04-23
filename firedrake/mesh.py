@@ -619,6 +619,9 @@ class MeshHierarchy(Mesh):
     def __len__(self):
         return len(self._hierarchy)
 
+    def __getitem__(self, idx):
+        return self._hierarchy[idx]
+
 
 class ExtrudedMesh(Mesh):
     """Build an extruded mesh from a 2D input mesh
