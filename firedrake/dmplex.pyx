@@ -672,6 +672,9 @@ def mark_entity_classes(PETSc.DM plex):
                                        facets[f], &depth))
             CHKERR(DMPlexSetLabelValue(plex.dm, lbl_non_exec_halo,
                                        facets[f], depth))
+            # Remove facet from exec-halo label
+            CHKERR(DMPlexClearLabelValue(plex.dm, lbl_halo,
+                                         facets[f], depth))
 
     if nfacets > 0:
         CHKERR(DMPlexRestoreTransitiveClosure(plex.dm,
@@ -741,7 +744,8 @@ def get_facets_by_class(PETSc.DM plex, label):
 
     for i, op2class in enumerate(["op2_core",
                                   "op2_non_core",
-                                  "op2_exec_halo"]):
+                                  "op2_exec_halo",
+                                  "op2_non_exec_halo"]):
         nclass = plex.getStratumSize(op2class, dim-1)
         if nclass > 0:
             class_is = plex.getStratumIS(op2class, dim-1)
@@ -754,7 +758,6 @@ def get_facets_by_class(PETSc.DM plex, label):
                     fi += 1
         facet_classes[i] = fi
 
-    facet_classes[3] = facet_classes[2]
     return facets, facet_classes
 
 @cython.boundscheck(False)
@@ -770,11 +773,14 @@ def plex_renumbering(PETSc.DM plex):
     is the Plex -> OP2 permutation.
     """
     cdef:
-        PetscInt dim, ncells, nclosure, c, ci, p, p_glbl, lbl_val
+        PetscInt dim, ncells, nfacets, nclosure, c, f, ci
+        PetscInt p, p_glbl, lbl_val
         PetscInt *cells = NULL
+        PetscInt *facets = NULL
         PetscInt *closure = NULL
         PetscInt *perm = NULL
         PETSc.IS cell_is = None
+        PETSc.IS facet_is = None
         PETSc.IS perm_is = None
         char *lbl_chr = NULL
         PetscBT seen = NULL
@@ -812,6 +818,22 @@ def plex_renumbering(PETSc.DM plex):
                                                   PETSC_TRUE,
                                                   &nclosure,
                                                   &closure))
+
+    # We currently mark non-exec facets without marking non-exec
+    # cells, so they will not get picked up by the cell closure loops
+    # and we need to add them explicitly.
+    op2class = "op2_non_exec_halo"
+    nfacets = plex.getStratumSize(op2class, dim-1)
+    if nfacets > 0:
+        facet_is = plex.getStratumIS(op2class, dim-1)
+        CHKERR(ISGetIndices(facet_is.iset, &facets))
+        for f in range(nfacets):
+            p = facets[f]
+            if not PetscBTLookup(seen, p):
+                CHKERR(PetscBTSet(seen, p))
+                perm[p_glbl] = p
+                p_glbl += 1
+
     CHKERR(PetscBTDestroy(&seen))
 
     perm_is = PETSc.IS().create()
