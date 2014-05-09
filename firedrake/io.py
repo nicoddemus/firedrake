@@ -152,6 +152,14 @@ class _HDF5File(object):
         plex.setOutputSequenceNumber(self._time_step)
 
         if not self._has_topology:
+            # We do not want to output the OP2 entity class labels,
+            # since they are not conistent across processes and may
+            # change when we re-initialise the Plex from checkpoint.
+            plex.labelSetOutput("op2_core", False)
+            plex.labelSetOutput("op2_non_", False)
+            plex.labelSetOutput("op2_exec_halo", False)
+            plex.labelSetOutput("op2_non_exec_halo", False)
+
             plex.view(self._viewer)
             self._has_topology = True
 
