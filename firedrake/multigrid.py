@@ -109,17 +109,27 @@ class FunctionSpaceHierarchy(object):
         Vc = self._hierarchy[level]
         Vf = self._hierarchy[level + 1]
 
-        c2f = self._mesh_hierarchy._c2f_cells[level]
-        arity = Vf.cell_node_map().arity * c2f.shape[1]
-        map_vals = Vf.cell_node_map().values_with_halo[c2f].flatten()
+        family = self.ufl_element().family()
+        degree = self.ufl_element().degree()
 
-        map = op2.Map(Vc.mesh().cell_set,
-                      Vf.node_set,
-                      arity,
-                      map_vals)
+        if family == "Discontinuous Lagrange":
+            if degree == 0:
+                c2f = self._mesh_hierarchy._c2f_cells[level]
+                arity = Vf.cell_node_map().arity * c2f.shape[1]
+                map_vals = Vf.cell_node_map().values_with_halo[c2f].flatten()
 
-        self._map_cache[level] = map
-        return map
+                map = op2.Map(Vc.mesh().cell_set,
+                              Vf.node_set,
+                              arity,
+                              map_vals)
+
+                self._map_cache[level] = map
+                return map
+            else:
+                raise RuntimeError
+
+        if family == "Lagrange":
+            raise RuntimeError
 
 
 class FunctionHierarchy(object):
