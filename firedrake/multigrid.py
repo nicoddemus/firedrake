@@ -85,26 +85,25 @@ class FunctionSpaceHierarchy(object):
     def __getitem__(self, idx):
         return self._hierarchy[idx]
 
-    def cell_node_map(self, coarse_level, bcs=None):
+    def cell_node_map(self, level, bcs=None):
         """A :class:`pyop2.Map` from cells on a coarse mesh to the
         corresponding degrees of freedom on a the fine mesh below it.
 
-        :arg coarse_level: the coarse level the map should be from.
+        :arg level: the coarse level the map should be from.
         :arg bcs: optional iterable of :class:`.DirichletBC`\s
              (currently ignored).
         """
-        if not 0 <= coarse_level < len(self) - 1:
-            raise RuntimeError("Requested coarse level %d outside permissible range [%d, %d)" %
-                               (coarse_level, 0, len(self)))
-        key = coarse_level
+        if not 0 <= level < len(self) - 1:
+            raise RuntimeError("Requested coarse level %d outside permissible range [0, %d)" %
+                               (level, len(self) - 1))
         try:
-            return self._map_cache[key]
+            return self._map_cache[level]
         except KeyError:
             pass
-        Vc = self._hierarchy[coarse_level]
-        Vf = self._hierarchy[coarse_level+1]
+        Vc = self._hierarchy[level]
+        Vf = self._hierarchy[level + 1]
 
-        c2f = self._mesh_hierarchy._c2f_cells[coarse_level]
+        c2f = self._mesh_hierarchy._c2f_cells[level]
         arity = Vf.cell_node_map().arity * c2f.shape[1]
         map_vals = Vf.cell_node_map().values_with_halo[c2f].flatten()
 
@@ -113,7 +112,7 @@ class FunctionSpaceHierarchy(object):
                       arity,
                       map_vals)
 
-        self._map_cache[key] = map
+        self._map_cache[level] = map
         return map
 
 
