@@ -13,7 +13,7 @@ import utils
 import vector
 
 
-__all__ = ['Function', 'FunctionHierarchy']
+__all__ = ['Function']
 
 
 valuetype = np.float64
@@ -353,37 +353,3 @@ for (unsigned int d=0; d < %(dim)d; d++) {
             assemble_expressions.IDiv(self, expr))
 
         return self
-
-
-class FunctionHierarchy(object):
-    """Build a hierarchy of :class:`~.Function`\s"""
-    def __init__(self, fs_hierarchy):
-        """
-        :arg fs_hierarchy: the :class:`~.FunctionSpaceHierarchy` to build on.
-
-        `fs_hierarchy` may also be an existing
-        :class:`FunctionHierarchy`, in which case a copy of the
-        hierarchy is returned.
-        """
-        if isinstance(fs_hierarchy, FunctionHierarchy):
-            self._function_space = fs_hierarchy.function_space()
-        else:
-            self._function_space = fs_hierarchy
-
-        self._hierarchy = [Function(f) for f in fs_hierarchy]
-
-    def __iter__(self):
-        for f in self._hierarchy:
-            yield f
-
-    def __len__(self):
-        return len(self._hierarchy)
-
-    def __getitem__(self, idx):
-        return self._hierarchy[idx]
-
-    def function_space(self):
-        return self._function_space
-
-    def cell_node_map(self, i):
-        return self._function_space.cell_node_map(i)

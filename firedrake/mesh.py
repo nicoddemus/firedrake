@@ -20,7 +20,7 @@ from parameters import parameters
 from petsc import PETSc
 
 
-__all__ = ['Mesh', 'ExtrudedMesh', 'MeshHierarchy',
+__all__ = ['Mesh', 'ExtrudedMesh',
            'UnitIntervalMesh', 'UnitSquareMesh', 'UnitCircleMesh',
            'IntervalMesh', 'PeriodicIntervalMesh', 'PeriodicUnitIntervalMesh',
            'UnitTetrahedronMesh', 'UnitTriangleMesh', 'UnitCubeMesh',
@@ -576,51 +576,6 @@ class Mesh(object):
         size = self.cell_classes
         return self.parent.cell_set if self.parent else \
             op2.Set(size, "%s_cells" % self.name)
-
-
-class MeshHierarchy(Mesh):
-    """Build a hierarchy of meshes by uniformly refining a coarse mesh"""
-    def __init__(self, mesh, refinement_levels):
-        """
-        :arg mesh: the coarse mesh to refine
-        :arg refinement_levels: the number of levels of refinement
-        """
-        mesh._plex.setRefinementUniform(True)
-        dm_hierarchy = mesh._plex.refineHierarchy(refinement_levels)
-        for dm in dm_hierarchy:
-            dm.removeLabel("boundary_faces")
-            dm.markBoundaryFaces("boundary_faces")
-            dm.removeLabel("exterior_facets")
-            dm.removeLabel("interior_facets")
-            dm.removeLabel("boundary_ids")
-            dm.removeLabel("op2_core")
-            dm.removeLabel("op2_non_core")
-            dm.removeLabel("op2_exec_halo")
-
-        self._hierarchy = [mesh] + [Mesh(None, name="%s_refined_%d" % (mesh.name, i),
-                                         plex=dm, distribute=False)
-                                    for i, dm in enumerate(dm_hierarchy)]
-
-        self._ufl_cell = mesh.ufl_cell()
-        # Simplex only
-        factor = 2 ** self.ufl_cell().topological_dimension()
-        self._c2f_cells = []
-        for mc, mf in zip(self._hierarchy[:-1], self._hierarchy[1:]):
-            cback = mc._inv_cells
-            fforward = mf._cells
-            ofcells = np.dstack([(cback * factor) + i for i in range(factor)]).flatten()
-            fcells = fforward[ofcells]
-            self._c2f_cells.append(fcells.reshape(-1, factor))
-
-    def __iter__(self):
-        for m in self._hierarchy:
-            yield m
-
-    def __len__(self):
-        return len(self._hierarchy)
-
-    def __getitem__(self, idx):
-        return self._hierarchy[idx]
 
 
 class ExtrudedMesh(Mesh):

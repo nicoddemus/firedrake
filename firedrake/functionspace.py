@@ -15,8 +15,7 @@ import utils
 
 
 __all__ = ['FunctionSpace', 'VectorFunctionSpace',
-           'MixedFunctionSpace', 'IndexedFunctionSpace',
-           'FunctionSpaceHierarchy']
+           'MixedFunctionSpace', 'IndexedFunctionSpace']
 
 
 class FunctionSpaceBase(ObjectCached):
@@ -900,64 +899,3 @@ class IndexedFunctionSpace(FunctionSpaceBase):
         :meth:`exterior_facet_node_map` in that only surface nodes
         are referenced, not all nodes in cells touching the surface.'''
         return self._fs.exterior_facet_boundary_node_map
-
-
-class FunctionSpaceHierarchy(object):
-    """Build a hierarchy of function spaces.
-
-    Given a hierarchy of meshes, this constructs a hierarchy of
-    function spaces, with the property that every coarse space is a
-    subspace of the fine spaces that are a refinement of it.
-    """
-    def __init__(self, mesh_hierarchy, family, degree):
-        """
-        :arg mesh_hierarchy: a :class:`.MeshHierarchy` to build the
-             function spaces on.
-        :arg family: the function space family
-        :arg degree: the degree of the function space
-        """
-        self._mesh_hierarchy = mesh_hierarchy
-        self._hierarchy = [FunctionSpace(m, family, degree) for m in self._mesh_hierarchy]
-
-        self._map_cache = {}
-
-    def __len__(self):
-        return len(self._hierarchy)
-
-    def __iter__(self):
-        for fs in self._hierarchy:
-            yield fs
-
-    def __getitem__(self, idx):
-        return self._hierarchy[idx]
-
-    def cell_node_map(self, coarse_level, bcs=None):
-        """A :class:`pyop2.Map` from cells on a coarse mesh to the
-        corresponding degrees of freedom on a the fine mesh below it.
-
-        :arg coarse_level: the coarse level the map should be from.
-        :arg bcs: optional iterable of :class:`.DirichletBC`\s
-             (currently ignored).
-        """
-        if not 0 <= coarse_level < len(self) - 1:
-            raise RuntimeError("Requested coarse level %d outside permissible range [%d, %d)" %
-                               (coarse_level, 0, len(self)))
-        key = coarse_level
-        try:
-            return self._map_cache[key]
-        except KeyError:
-            pass
-        Vc = self._hierarchy[coarse_level]
-        Vf = self._hierarchy[coarse_level+1]
-
-        c2f = self._mesh_hierarchy._c2f_cells[coarse_level]
-        arity = Vf.cell_node_map().arity * c2f.shape[1]
-        map_vals = Vf.cell_node_map().values_with_halo[c2f].flatten()
-
-        map = op2.Map(Vc.mesh().cell_set,
-                      Vf.node_set,
-                      arity,
-                      map_vals)
-
-        self._map_cache[key] = map
-        return map
