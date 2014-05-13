@@ -76,6 +76,7 @@ class FunctionSpaceHierarchy(object):
                            for m in self._mesh_hierarchy]
 
         self._map_cache = {}
+        self._ufl_element = self[0].ufl_element()
 
     def __len__(self):
         return len(self._hierarchy)
@@ -86,6 +87,9 @@ class FunctionSpaceHierarchy(object):
 
     def __getitem__(self, idx):
         return self._hierarchy[idx]
+
+    def ufl_element(self):
+        return self._ufl_element
 
     def cell_node_map(self, level, bcs=None):
         """A :class:`pyop2.Map` from cells on a coarse mesh to the
