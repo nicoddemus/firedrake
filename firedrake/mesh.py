@@ -307,7 +307,7 @@ class Mesh(object):
 
         self._ufl_domain = ufl.Domain(self.ufl_cell(), data=self)
         dim = self._plex.getDimension()
-        self._cells, self.cell_classes, self._inv_cells = dmplex.get_cells_by_class(self._plex)
+        self.cell_classes = dmplex.get_cell_classes(self._plex)
 
         # Derive a cell numbering from the Plex renumbering
         cell_entity_dofs = np.zeros(dim+1, dtype=np.int32)
@@ -537,9 +537,6 @@ class Mesh(object):
                      self.coordinates.dat(op2.READ, self.coordinates.cell_node_map()))
         self._cell_orientations = cell_orientations
 
-    def cells(self):
-        return self._cells
-
     def ufl_id(self):
         return id(self)
 
@@ -617,7 +614,6 @@ class ExtrudedMesh(Mesh):
             raise RuntimeError("Must have at least one layer of extruded cells (not %d)" % layers)
         # All internal logic works with layers of base mesh (not layers of cells)
         self._layers = layers + 1
-        self._cells = mesh._cells
         self.parent = mesh.parent
         self.uid = mesh.uid
         self.name = mesh.name
