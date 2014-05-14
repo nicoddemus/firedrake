@@ -40,8 +40,16 @@ class MeshHierarchy(mesh.Mesh):
         factor = 2 ** self.ufl_cell().topological_dimension()
         self._c2f_cells = []
         for mc, mf in zip(self._hierarchy[:-1], self._hierarchy[1:]):
-            cback = mc._inv_cells
-            fforward = mf._cells
+            cback = np.empty(mc.num_cells(), dtype=np.int32)
+            cStart, cEnd = mc._plex.getHeightStratum(0)
+            for i in range(*mc._plex.getChart()):
+                if mc._cell_numbering.getDof(i) > 0:
+                    cback[mc._cell_numbering.getOffset(i)] = i - cStart
+            cStart, cEnd = mf._plex.getHeightStratum(0)
+            fforward = np.empty(mf.num_cells(), dtype=np.int32)
+            for i in range(*mf._plex.getChart()):
+                if mf._cell_numbering.getDof(i) > 0:
+                    fforward[i] = mf._cell_numbering.getOffset(i) - cStart
             ofcells = np.dstack([(cback * factor) + i for i in range(factor)]).flatten()
             fcells = fforward[ofcells]
             self._c2f_cells.append(fcells.reshape(-1, factor))

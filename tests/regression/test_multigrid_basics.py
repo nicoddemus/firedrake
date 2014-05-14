@@ -69,7 +69,6 @@ def test_restriction_dg0(dg0):
         assert np.allclose(f.dat.data, 1)
 
 
-@pytest.mark.xfail(reason="Inverse cell map not correct")
 def test_restriction_dg0_coords(dg0):
     for f in dg0:
         f.assign(0)
@@ -98,7 +97,6 @@ def test_restriction_dg0_coords_no_reorder(dg0_noreorder):
         assert np.allclose(tmp.dat.data, f.dat.data)
 
 
-@pytest.mark.xfail(reason="Inverse cell map not correct")
 def test_prolongation_cg1_coords(cg1):
     for f in cg1:
         f.assign(0)
