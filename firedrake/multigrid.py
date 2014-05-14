@@ -113,20 +113,19 @@ class FunctionSpaceHierarchy(object):
         degree = self.ufl_element().degree()
 
         if family == "Discontinuous Lagrange":
-            if degree == 0:
-                c2f = self._mesh_hierarchy._c2f_cells[level]
-                arity = Vf.cell_node_map().arity * c2f.shape[1]
-                map_vals = Vf.cell_node_map().values_with_halo[c2f].flatten()
-
-                map = op2.Map(Vc.mesh().cell_set,
-                              Vf.node_set,
-                              arity,
-                              map_vals)
-
-                self._map_cache[level] = map
-                return map
-            else:
+            if degree != 0:
                 raise RuntimeError
+            c2f = self._mesh_hierarchy._c2f_cells[level]
+            arity = Vf.cell_node_map().arity * c2f.shape[1]
+            map_vals = Vf.cell_node_map().values_with_halo[c2f].flatten()
+
+            map = op2.Map(Vc.mesh().cell_set,
+                          Vf.node_set,
+                          arity,
+                          map_vals)
+
+            self._map_cache[level] = map
+            return map
 
         if family == "Lagrange":
             raise RuntimeError
@@ -178,10 +177,9 @@ class FunctionHierarchy(object):
         degree = fs.ufl_element().degree()
 
         if family == "Discontinuous Lagrange":
-            if degree == 0:
-                self._prolong_dg0(level)
-            else:
+            if degree != 0:
                 raise RuntimeError("Can only prolong P0 fields, not P%dDG" % degree)
+            self._prolong_dg0(level)
 
     def restrict(self, level):
         """Restrict from a fine to the next coarsest hierarchy level.
