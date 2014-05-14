@@ -4,6 +4,7 @@ from evtk.hl import _requiresLargeVTKFileSize
 from ufl import Cell, OuterProductCell
 import numpy as np
 import os
+from collections import defaultdict
 
 from pyop2.logger import warning, RED
 from pyop2.mpi import MPI
@@ -130,7 +131,7 @@ class _HDF5File(object):
         self._viewer = PETSc.ViewerHDF5().create(filename,
                                                  mode="w",
                                                  comm=MPI.comm)
-        self._time_step = 0
+        self._time_step = defaultdict(int)
         self._has_topology = False
 
     def __del__(self):
@@ -147,9 +148,10 @@ class _HDF5File(object):
 
     def __lshift__(self, data, timestep=None):
         """It allows file << function syntax for writing data out to disk. """
+        name = str(data)
         fspace = data.function_space()
         plex = fspace.mesh()._plex
-        plex.setOutputSequenceNumber(self._time_step)
+        plex.setOutputSequenceNumber(self._time_step[name])
 
         if not self._has_topology:
             # We do not want to output the OP2 entity class labels,
@@ -165,6 +167,9 @@ class _HDF5File(object):
 
         # Tell the Plex which section to use
         plex.setDefaultSection(fspace._global_numbering)
+        #plex.setDefaultGlobalSection(fspace._universal_numbering)
+        fspace._halo._sf.view()
+        plex.setDefaultSF(fspace._halo._sf)
         fspace._global_numbering.setFieldName(0, str(data))
 
         # Build the Vec object from the DM
@@ -175,7 +180,7 @@ class _HDF5File(object):
         # Output data via the PetscViewer
         vec.view(self._viewer)
 
-        self._time_step += 1
+        self._time_step[name] += 1
 
 
 class _VTUFile(object):
