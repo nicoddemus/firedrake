@@ -316,6 +316,11 @@ class Mesh(object):
                                                         cell_entity_dofs,
                                                         perm=self._plex_renumbering)
 
+        cell_entity_dofs[:] = 0
+        cell_entity_dofs[0] = 1
+        self._vertex_numbering = self._plex.createSection(1, [1], cell_entity_dofs,
+                                                          perm=self._plex_renumbering)
+
         self._cell_closure = None
         self.interior_facets = None
         self.exterior_facets = None
