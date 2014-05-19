@@ -846,6 +846,8 @@ def plex_renumbering(PETSc.DM plex, np.ndarray[PetscInt, ndim=1] reordering=None
         CHKERR(PetscFree(non_core_cells))
         CHKERR(PetscFree(exec_halo_cells))
 
+    CHKERR(PetscBTDestroy(&seen))
+
     perm_is = PETSc.IS().create()
     perm_is.setType("general")
     CHKERR(ISGeneralSetIndices(perm_is.iset, pEnd - pStart,
