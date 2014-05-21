@@ -223,6 +223,12 @@ class FunctionHierarchy(object):
                 self._restrict_dg0(level)
             else:
                 raise RuntimeError("Can only restrict P0 fields, not P%dDG" % degree)
+        elif family == "Lagrange":
+            if degree != 1:
+                raise RuntimeError("Can only restrict P1 fields, not P%d" % degree)
+            self._restrict_cg1(level)
+        else:
+            raise RuntimeError("Restriction only implemented for P0DG and P1")
 
     def _prolong_dg0(self, level):
         c2f_map = self.cell_node_map(level)
@@ -293,3 +299,67 @@ class FunctionHierarchy(object):
         op2.par_loop(self._prolong_kernel, coarse.cell_set,
                      coarse.dat(op2.READ, coarse.cell_node_map()),
                      fine.dat(op2.WRITE, c2f_map))
+
+    def _restrict_cg1(self, level):
+        c2f_map = self.cell_node_map(level - 1)
+        coarse = self[level - 1]
+        fine = self[level]
+        if not hasattr(self, '_restrict_kernel'):
+            element = coarse.function_space().fiat_element
+            import FIAT
+            quadrature = FIAT.make_quadrature(element.ref_el, 2)
+            weights = quadrature.get_weights()
+            points = quadrature.get_points()
+
+            fine_basis = element.tabulate(0, points).values()[0]
+            coarse_basis = None
+
+            k = """
+            #include "firedrake_geometry.h"
+            static inline void restrict_cg1(double **coarse, double **fine, double **coordinates)
+            {
+            const double fine_basis[4][3] = %(fine_basis)s;
+            const double weight[4] = %(weight)s;
+            double coarse_[3] = {0};
+
+            double J[4];
+            compute_jacobian_triangle_2d(J, coordinates);
+            double K[4];
+            double detJ;
+            compute_jacobian_inverse_triangle_2d(K, detJ, J);
+            const double det = fabs(detJ);
+            for ( int fcell = 0; fcell < 4; fcell++ ) {
+                for ( int ip = 0; ip < 4; ip++ ) {
+                    double fine_coeff = 0;
+                    for ( int i = 0; i < 3; i++ ) {
+                        fine_coeff += fine[fcell*3 + i][0] * fine_basis[ip][i];
+                    }
+                    for ( int i = 0; i < 3; i++ ) {
+                        coarse_[i] += (weight[ip] * fine_coeff * fine_basis[ip][i]) * det/4.0;
+                    }
+                }
+            }
+            for ( int i = 0; i < 3; i++ ) {
+                coarse[i][0] = coarse_[i];
+            }
+            }
+            """ % {"fine_basis": "{{" + "},\n{".join([", ".join(map(str, x)) for x in fine_basis.T])+"}}",
+                   "weight": "{"+", ".join(["%s" % w for w in weights]) +"}"}
+
+            k = op2.Kernel(k, 'restrict_cg1', include_dirs=["/data/lmitche1/src/firedrake/firedrake"])
+            c2f = self._function_space._mesh_hierarchy._c2f_cells[level - 1]
+
+            arity = fine.cell_node_map().arity * c2f.shape[1]
+            map_vals = fine.cell_node_map().values_with_halo[c2f].flatten()
+
+            map_ = op2.Map(coarse.cell_set,
+                          fine.node_set,
+                          arity,
+                          map_vals)
+
+
+            ccoords = coarse.function_space().mesh().coordinates
+            op2.par_loop(k, coarse.cell_set,
+                         coarse.dat(op2.WRITE, coarse.cell_node_map()),
+                         fine.dat(op2.READ, map_),
+                         ccoords.dat(op2.READ, ccoords.cell_node_map(), flatten=True))
