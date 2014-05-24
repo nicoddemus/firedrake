@@ -27,8 +27,8 @@ before_install:
   - "sudo apt-get install -qq build-essential python-dev git-core mercurial \
     cmake cmake-curses-gui gmsh python-gmsh python-pip swig \
     libblas-dev liblapack-dev gfortran triangle-bin \
-    libvtk5-dev python-vtk libparmetis-dev python-vtk cython libhdf5-openmpi-dev"
-#  - sudo apt-get libopenmpi-dev openmpi-bin 
+    libvtk5-dev python-vtk libparmetis-dev python-vtk cython"
+#  - sudo apt-get libhdf5-openmpi-dev libopenmpi-dev openmpi-bin 
   - wget https://raw.github.com/OP2/PyOP2/master/requirements-minimal.txt
   - pip install psutil -r requirements-minimal.txt -r requirements.txt
   - pip install pytest-xdist
