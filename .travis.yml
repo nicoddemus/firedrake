@@ -1,10 +1,3 @@
-notifications:
-  irc:
-    channels: "chat.freenode.net#firedrake"
-    skip_join: true
-    on_success: change
-    on_failure: always
-    template: "%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message} | %{build_url}"
 language: python
 # We're not Python 2.6 compatible at the moment
 python: "2.7"
@@ -14,11 +7,11 @@ env:
     - PETSC_CONFIGURE_OPTIONS="--download-ctetgen --download-triangle --download-chaco"
   matrix:
     - PYOP2_BACKEND=sequential PYOP2_TESTS=regression
-    - OMP_NUM_THREADS=1 PYOP2_BACKEND=openmp PYOP2_TESTS=regression
-    - OMP_NUM_THREADS=2 PYOP2_BACKEND=openmp PYOP2_TESTS=regression
-    - PYOP2_BACKEND=sequential PYOP2_TESTS=extrusion
-    - OMP_NUM_THREADS=1 PYOP2_BACKEND=openmp PYOP2_TESTS=extrusion
-    - OMP_NUM_THREADS=2 PYOP2_BACKEND=openmp PYOP2_TESTS=extrusion
+    #- OMP_NUM_THREADS=1 PYOP2_BACKEND=openmp PYOP2_TESTS=regression
+    #- OMP_NUM_THREADS=2 PYOP2_BACKEND=openmp PYOP2_TESTS=regression
+    #- PYOP2_BACKEND=sequential PYOP2_TESTS=extrusion
+    #- OMP_NUM_THREADS=1 PYOP2_BACKEND=openmp PYOP2_TESTS=extrusion
+    #- OMP_NUM_THREADS=2 PYOP2_BACKEND=openmp PYOP2_TESTS=extrusion
 virtualenv:
   system_site_packages: true
 # command to install dependencies
