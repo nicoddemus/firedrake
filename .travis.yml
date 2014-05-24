@@ -32,6 +32,7 @@ before_install:
     libvtk5-dev python-vtk libparmetis-dev python-vtk cython"
   - wget https://raw.github.com/OP2/PyOP2/master/requirements-minimal.txt
   - pip install psutil -r requirements-minimal.txt -r requirements.txt
+  - pip install pytest-xdist
   - if [[ $TRAVIS_PYTHON_VERSION == "2.6" ]]; then pip install argparse ordereddict; fi
 install:
   - make
@@ -39,4 +40,4 @@ install:
 script:
   - export PYTHONPATH=`pwd`:$PYTHONPATH
   - flake8
-  - py.test --short -v tests/${PYOP2_TESTS}
+  - py.test -n 4 --short -v tests/${PYOP2_TESTS}
